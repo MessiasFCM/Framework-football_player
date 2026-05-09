@@ -1,0 +1,5 @@
+experiment:
+  name: "exp_text_concat"
+  dataset_config: "configs/dataset_config.yaml"
+  text_strategy: "concat_labels"
+  output_file: "text_concat_profiles.csv"

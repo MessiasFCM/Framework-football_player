@@ -1,0 +1,5 @@
+experiment:
+  name: "exp_text_llm"
+  dataset_config: "configs/dataset_config.yaml"
+  text_strategy: "llm_description"
+  output_file: "text_llm_profiles.csv"

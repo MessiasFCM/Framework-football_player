@@ -1,0 +1,14 @@
+name: football-player-framework
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pandas
+  - numpy
+  - scikit-learn
+  - pyyaml
+  - openpyxl
+  - tqdm
+  - pytest
+  - kaggle
+  - pip

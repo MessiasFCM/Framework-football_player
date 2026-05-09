@@ -1,0 +1,5 @@
+model:
+  name: "biencoder"
+  encoder_name: "stub-biencoder"
+  pooling: "mean"
+  normalize_embeddings: true

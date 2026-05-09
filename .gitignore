@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.coverage
+.DS_Store
+Thumbs.db
+*.xlsx
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/queries/.gitkeep
+!outputs/indexes/.gitkeep
+!outputs/results/.gitkeep
+!outputs/tables/.gitkeep
+!outputs/figures/.gitkeep

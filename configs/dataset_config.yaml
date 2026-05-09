@@ -1,0 +1,35 @@
+dataset:
+  raw_file: "Top_10_Leagues_Player_Data_2024_2025.xlsx"
+  sheet_name: "AllCompDataset"
+  id_column: "Player"
+  source:
+    type: "kaggle"
+    dataset_ref: "abhayr10/top-10-leagues-player-data2024-25"
+    auto_download: true
+    extract_subdir: "top-10-leagues-player-data2024-25"
+    auto_detect_downloaded_file: true
+  text_columns:
+    - Player
+    - Nation
+    - Pos
+    - Squad
+    - Age
+    - Born
+  numeric_columns:
+    - MP
+    - Starts
+    - Min
+    - 90s
+    - Gls
+    - Ast
+    - CrdY
+    - CrdR
+    - xG
+    - xAG
+    - npxG
+    - xG+xAG
+    - PrgC
+    - PrgP
+    - PrgR
+  drop_missing_player: true
+  processed_filename: "players_processed.csv"
