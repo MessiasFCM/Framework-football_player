@@ -44,6 +44,9 @@ class BM25SearchModel(BaseSearchModel):
         return self
 
     def query(self, query_text: str, top_k: int = 5) -> pd.DataFrame:
+        return self.query_with_scores(query_text=query_text, top_k=top_k)
+
+    def query_with_scores(self, query_text: str, top_k: int = 5) -> pd.DataFrame:
         if self.metadata_ is None or not self.documents_:
             raise RuntimeError("The BM25 model must be fitted before querying.")
 
@@ -56,6 +59,11 @@ class BM25SearchModel(BaseSearchModel):
         results["score"] = scores
         results = results.sort_values(by="score", ascending=False, kind="stable")
         return results.head(top_k).reset_index(drop=True)
+
+    def rank(self, query_text: str) -> pd.DataFrame:
+        if self.metadata_ is None:
+            raise RuntimeError("The BM25 model must be fitted before ranking.")
+        return self.query_with_scores(query_text=query_text, top_k=len(self.metadata_))
 
     def _score_document(self, query_tokens: list[str], document_index: int) -> float:
         document_term_frequency = self.term_frequencies_[document_index]

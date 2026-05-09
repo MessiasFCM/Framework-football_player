@@ -1,5 +1,5 @@
 {
-  "experiment_name": "BM25_Concat_Player_Search",
+  "experiment_name": "BM25_Controlled_Player_Description_Search",
   "task_type": "search",
   "output_dir": "outputs/results",
   "dataset": {
@@ -8,7 +8,7 @@
   "model": [
     {
       "name": "bm25",
-      "text_strategy": "concat_labels"
+      "text_strategy": "llm_description"
     }
   ],
   "execution": {
@@ -28,9 +28,9 @@
     }
   },
   "search": {
-    "query_text": "creative left winger with high goals assists and progressive carries",
+    "query_text": "Brazilian forward with high goals expected goals assists and progressive carries",
     "top_k": 10,
     "result_columns": ["Player", "Squad", "Pos", "Nation", "Age", "Gls", "Ast", "xG", "xAG", "PrgC", "PrgP"],
-    "output_file": "bm25_concat_search_results.csv"
+    "output_file": "bm25_controlled_description_results.csv"
   }
 }

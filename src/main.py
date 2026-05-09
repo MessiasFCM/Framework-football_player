@@ -10,6 +10,10 @@ from src.dataset.manager import save_dataframe
 from src.recs.dataloader.numeric_builder import NumericRepresentationBuilder
 from src.recs.model.knn_model import KNNPlayerRecommender
 from src.search.dataloader.profile_builder import PlayerProfileBuilder
+from src.search.evaluation.evaluator import SearchEvaluator
+from src.search.evaluation.reports import metrics_report_to_dataframe
+from src.search.evaluation.reports import save_metrics_report
+from src.search.evaluation.reports import save_report
 from src.search.model.bm25_model import BM25SearchModel
 from src.utils.config import load_config
 from src.utils.logging import get_logger
@@ -75,7 +79,9 @@ def run_search_experiment(experiment_config: dict) -> Path:
     dataset_config = resolve_dataset_config(experiment_config)
     model_entry = experiment_config["model"][0]
     model_config = resolve_model_config(experiment_config["task_type"], model_entry)
+    model_params = extract_model_parameters(model_config)
     search_config = experiment_config.get("search", {})
+    evaluation_config = experiment_config.get("evaluation", {})
 
     processed_df = load_and_process_dataset(dataset_config)
     profiled_df = build_profiled_dataset(
@@ -84,15 +90,25 @@ def run_search_experiment(experiment_config: dict) -> Path:
         model_entry.get("text_strategy", search_config.get("text_strategy", "concat_labels")),
     )
 
-    model_name = model_config["name"]
-    if model_name != "bm25":
+    model_name = str(model_config["name"]).casefold()
+    if model_name not in {"bm25", "bm25model"}:
         raise ValueError(f"Unsupported text search model: {model_name}")
 
     model = BM25SearchModel(
-        k1=model_config.get("k1", 1.5),
-        b=model_config.get("b", 0.75),
+        k1=model_params.get("hyperparams", {}).get("k1", model_params.get("k1", 1.5)),
+        b=model_params.get("hyperparams", {}).get("b", model_params.get("b", 0.75)),
     )
     fitted_model = model.fit(documents=profiled_df["player_profile"], metadata=profiled_df)
+
+    evaluation_path = run_search_evaluation(
+        experiment_config=experiment_config,
+        evaluation_config=evaluation_config,
+        dataset_config=dataset_config,
+        profiled_df=profiled_df,
+        fitted_model=fitted_model,
+    )
+    if evaluation_path is not None:
+        logger.info("Search evaluation saved to %s", evaluation_path)
 
     query_text = resolve_search_query(
         profiled_df=profiled_df,
@@ -180,11 +196,44 @@ def resolve_dataset_config(experiment_config: dict) -> dict:
 def resolve_model_config(task_type: str, model_entry: dict) -> dict:
     config_path = model_entry.get("config")
     if config_path is None:
-        config_path = f"configs/models/{task_type}/{model_entry['name']}.yaml"
+        config_path = resolve_model_config_path(task_type, model_entry["name"])
     loaded_config = load_config(config_path)
     model_config = loaded_config.get("model", loaded_config)
     if "name" not in model_config:
         model_config["name"] = model_entry["name"]
+    return model_config
+
+
+def resolve_model_config_path(task_type: str, model_name: str) -> str:
+    direct_path = resolve_path(f"configs/models/{task_type}/{model_name}.yaml")
+    if direct_path.exists():
+        return str(direct_path)
+
+    models_dir = resolve_path(f"configs/models/{task_type}")
+    normalized_target = sanitize_name(model_name)
+    for candidate_path in sorted(models_dir.glob("*.yaml")):
+        loaded_config = load_config(candidate_path)
+        candidate_model = loaded_config.get("model", loaded_config)
+        candidate_names = {
+            sanitize_name(str(candidate_model.get("name", ""))),
+            sanitize_name(str(candidate_model.get("model_name", ""))),
+            sanitize_name(candidate_path.stem),
+        }
+        if normalized_target in candidate_names:
+            return str(candidate_path)
+
+    return str(direct_path)
+
+
+def extract_model_parameters(model_config: dict) -> dict:
+    parameters = model_config.get("parameters")
+    if isinstance(parameters, dict):
+        merged = parameters.copy()
+        for key, value in model_config.items():
+            if key == "parameters":
+                continue
+            merged.setdefault(key, value)
+        return merged
     return model_config
 
 
@@ -253,6 +302,74 @@ def normalize_experiment_config(raw_config: dict) -> dict:
         }
 
     raise ValueError(f"Unsupported legacy experiment: {experiment_name}")
+
+
+def run_search_evaluation(
+    experiment_config: dict,
+    evaluation_config: dict,
+    dataset_config: dict,
+    profiled_df,
+    fitted_model: BM25SearchModel,
+) -> Path | None:
+    metrics = evaluation_config.get("metrics", [])
+    top_ks = [int(value) for value in evaluation_config.get("top_ks", [])]
+    if not metrics or not top_ks:
+        return None
+
+    id_column = dataset_config["id_column"]
+    rankings: list[list[str]] = []
+    relevance_sets: list[list[str]] = []
+    per_query_rows: list[dict[str, object]] = []
+
+    for _, row in profiled_df.iterrows():
+        ranking_df = fitted_model.rank(str(row["player_profile"]))
+        ranked_ids = ranking_df[id_column].astype(str).tolist()
+        rankings.append(ranked_ids)
+        relevance_sets.append([str(row[id_column])])
+
+        rank_position = next(
+            (rank for rank, candidate in enumerate(ranked_ids, start=1) if candidate == str(row[id_column])),
+            None,
+        )
+        per_query_rows.append(
+            {
+                "query_player": row[id_column],
+                "relevant_player": row[id_column],
+                "rank": rank_position,
+                "top_1_player": ranked_ids[0] if ranked_ids else None,
+                "top_5_players": " | ".join(ranked_ids[: min(5, len(ranked_ids))]),
+                "query_text": row["player_profile"],
+            }
+        )
+
+    evaluator = SearchEvaluator()
+    metrics_report = evaluator.evaluate(
+        rankings=rankings,
+        relevance_sets=relevance_sets,
+        top_ks=top_ks,
+        metrics=metrics,
+    )
+
+    experiment_name = sanitize_name(experiment_config["experiment_name"])
+    metrics_json_path = resolve_path("outputs/results") / f"{experiment_name}_search_metrics.json"
+    save_metrics_report(metrics_report, metrics_json_path)
+
+    metrics_table = metrics_report_to_dataframe(metrics_report)
+    metrics_csv_path = resolve_path("outputs/tables") / f"{experiment_name}_search_metrics.csv"
+    save_report(metrics_table, metrics_csv_path)
+
+    per_query_df = save_per_query_search_report(per_query_rows, experiment_name)
+    logger.info("Per-query search report saved with %s rows", len(per_query_df))
+    return metrics_json_path
+
+
+def save_per_query_search_report(rows: list[dict[str, object]], experiment_name: str):
+    import pandas as pd
+
+    report_df = pd.DataFrame(rows)
+    report_path = resolve_path("outputs/results") / f"{experiment_name}_search_queries.csv"
+    save_report(report_df, report_path)
+    return report_df
 
 
 def main() -> None:

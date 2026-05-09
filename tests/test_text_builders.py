@@ -22,5 +22,6 @@ def test_llm_description_builder_returns_deterministic_template() -> None:
     profiles = builder.build(df)
 
     assert profiles[0] == (
-        "Player A plays for Team A as FW, represents BRA, and has season indicators: Gls=5, Ast=3."
+        "Player A is a BRA football player who plays for Team A as a forward (FW). "
+        "Attacking output: goals 5, assists 3."
     )
