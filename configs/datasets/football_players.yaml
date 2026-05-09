@@ -1,0 +1,31 @@
+dataset:
+  name: "football_players"
+  raw_file: "Top_10_Leagues_Player_Data_2024_2025.xlsx"
+  sheet_name: "AllCompDataset"
+  id_column: "Player"
+  allow_download: true
+  text_columns:
+    - Player
+    - Nation
+    - Pos
+    - Squad
+    - Age
+    - Born
+  numeric_columns:
+    - MP
+    - Starts
+    - Min
+    - 90s
+    - Gls
+    - Ast
+    - CrdY
+    - CrdR
+    - xG
+    - xAG
+    - npxG
+    - xG+xAG
+    - PrgC
+    - PrgP
+    - PrgR
+  drop_missing_player: true
+  processed_filename: "players_processed.csv"

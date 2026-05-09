@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.models.knn_model import KNNPlayerRecommender
+from src.recs.model.knn_model import KNNPlayerRecommender
 
 
 def test_knn_returns_expected_number_of_similar_players() -> None:

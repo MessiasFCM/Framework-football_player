@@ -1,4 +1,0 @@
-model:
-  name: "splade"
-  encoder_name: "stub-splade"
-  max_features: 512

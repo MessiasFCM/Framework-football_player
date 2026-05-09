@@ -1,7 +1,0 @@
-experiment:
-  name: "exp_knn"
-  dataset_config: "configs/dataset_config.yaml"
-  model_config: "configs/models/knn.yaml"
-  query_player: "Lionel Messi"
-  top_k: 5
-  output_file: "knn_similar_players.csv"

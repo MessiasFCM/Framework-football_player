@@ -1,7 +1,7 @@
 import pandas as pd
 
-from src.representations.llm_description_builder import LLMDescriptionBuilder
-from src.representations.text_concat_builder import TextConcatBuilder
+from src.search.dataloader.profile_builder import LLMDescriptionBuilder
+from src.search.dataloader.profile_builder import TextConcatBuilder
 
 
 def test_text_concat_builder_formats_profiles() -> None:
@@ -10,7 +10,7 @@ def test_text_concat_builder_formats_profiles() -> None:
 
     profiles = builder.build(df)
 
-    assert profiles == ["Player: Player A | Squad: Team A | Gls: 5"]
+    assert profiles == ["player (Player): Player A | club (Squad): Team A | goals (Gls): 5"]
 
 
 def test_llm_description_builder_returns_deterministic_template() -> None:

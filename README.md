@@ -1,15 +1,29 @@
 # Football Player Search and Recommendation Framework
 
-Framework modular em Python para busca e recomendacao de jogadores de futebol a partir de uma base Excel com estatisticas da temporada 2024-2025.
+Framework modular em Python para busca e recomendacao de jogadores com base em um arquivo Excel da temporada 2024-2025.
 
 ## Estrutura
 
 ```text
 football-player-framework/
 |- data/
+|  |- raw/
+|  |- processed/
+|  `- queries/
 |- configs/
-|- notebooks/
+|  |- datasets/
+|  `- models/
+|- experiments/
 |- src/
+|  |- dataset/
+|  |- recs/
+|  |  |- dataloader/
+|  |  |- evaluation/
+|  |  `- model/
+|  `- search/
+|     |- dataloader/
+|     |- evaluation/
+|     `- model/
 |- outputs/
 `- tests/
 ```
@@ -24,80 +38,74 @@ football-player-framework/
 - openpyxl
 - tqdm
 - pytest
+- kaggle
 
 ## Instalacao
 
-### Via `venv`
-
 ```bash
 python -m venv .venv
-.venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Via Conda
+Ou:
 
 ```bash
 conda env create -f environment.yml
 conda activate football-player-framework
 ```
 
-## Dados
-
-1. Coloque o arquivo Excel bruto em `data/raw/`.
-2. Ajuste o nome do arquivo em `configs/dataset_config.yaml`, se necessario.
-3. A aba esperada por padrao e `AllCompDataset`.
-
 ## Execucao
 
-O primeiro experimento funcional e o baseline KNN:
+Busca textual com `BM25` e perfil `concat_labels`:
 
 ```bash
-python -m src.main --experiment configs/experiments/exp_knn.yaml
+python -m src.main --experiment experiments/search_bm25_concat.json
 ```
 
-Esse fluxo:
+Recomendacao com `KNN`:
 
-1. carrega a base Excel;
-2. limpa e padroniza os dados;
-3. gera vetores numericos;
-4. treina/indexa um modelo KNN com `StandardScaler` + `NearestNeighbors`;
-5. busca jogadores similares ao atleta definido no experimento;
-6. salva os resultados em `outputs/results/`.
+```bash
+python -m src.main --experiment experiments/recs_knn.json
+```
 
-## Download Automatico Do Dataset
+Os experimentos agora aceitam `JSON` ou `YAML`. O formato preferido e o JSON unificado, com campos como:
 
-O projeto agora tenta baixar automaticamente o dataset do Kaggle quando o arquivo configurado nao existe em `data/raw/`.
+- `experiment_name`
+- `task_type`
+- `dataset`
+- `model`
+- `execution`
+- `evaluation`
+- `search` ou `recs`
 
-Dataset configurado:
+## Dataset
+
+O dataset principal fica em `data/raw/` e a configuracao base esta em [configs/datasets/football_players.yaml](/home/messias/projects/Framework-football_player/configs/datasets/football_players.yaml).
+
+Se o arquivo nao existir localmente, o loader tenta baixar do Kaggle:
 
 - `abhayr10/top-10-leagues-player-data2024-25`
 
-Antes da primeira execucao, configure a autenticacao do Kaggle de uma destas formas:
+Configure a autenticacao do Kaggle por um destes caminhos:
 
-1. baixe seu arquivo `kaggle.json` em Kaggle > Account > Create New Token e salve em `~/.kaggle/kaggle.json`;
-2. ou defina as variaveis de ambiente `KAGGLE_USERNAME` e `KAGGLE_KEY`.
+1. salvar `kaggle.json` em `~/.config/kaggle/kaggle.json`
+2. definir `KAGGLE_USERNAME` e `KAGGLE_KEY`
 
-Na primeira execucao do experimento, o framework:
+Se preferir nao configurar Kaggle agora, coloque o arquivo Excel manualmente em:
 
-1. baixa o dataset com a API oficial do Kaggle;
-2. extrai os arquivos em `data/raw/top-10-leagues-player-data2024-25/`;
-3. localiza automaticamente o arquivo Excel principal;
-4. copia esse arquivo para `data/raw/` e segue o pipeline normalmente.
+- `data/raw/Top_10_Leagues_Player_Data_2024_2025.xlsx`
+- ou `data/raw/football_players/Top_10_Leagues_Player_Data_2024_2025.xlsx`
 
-## Estrategias Textuais
+## O que esta funcional hoje
 
-- `concat_labels`: concatena atributos e valores em texto controlado.
-- `llm_description`: interface local e deterministica baseada em template, sem chamadas externas.
+- `search/model/bm25_model.py`: baseline de busca textual
+- `search/dataloader/profile_builder.py`: `concat_labels` e mock `llm_description`
+- `recs/model/knn_model.py`: baseline de recomendacao com `StandardScaler` + `NearestNeighbors`
+- `dataset/manager.py`: carga, download, limpeza e padronizacao do Excel
 
 ## Testes
 
 ```bash
 pytest -q
 ```
-
-## Observacoes
-
-- Os arquivos processados sao salvos em `data/processed/`.
-- Os resultados dos experimentos sao salvos em `outputs/results/`.
-- Os modelos `Bi-encoder` e `SPLADE` estao preparados como stubs modulares para futuras extensoes.

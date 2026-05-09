@@ -1,0 +1,38 @@
+{
+  "experiment_name": "BM25_Concat_Player_Search",
+  "task_type": "search",
+  "output_dir": "outputs/results",
+  "dataset": {
+    "name": "football_players"
+  },
+  "model": [
+    {
+      "name": "bm25",
+      "text_strategy": "concat_labels"
+    }
+  ],
+  "execution": {
+    "skip": [],
+    "force": [],
+    "no_save": [],
+    "n_runs": 1,
+    "window_size": 0.05
+  },
+  "evaluation": {
+    "n_pos_samples": 20,
+    "n_neg_samples": 200,
+    "top_ks": [5, 10, 20, 50],
+    "metrics": ["NDCG", "RECALL", "PRECISION", "MAP", "MRR"],
+    "stats": {
+      "tests": [],
+      "alpha": 0.05,
+      "symbol": "UP"
+    }
+  },
+  "search": {
+    "query_text": "creative left winger with high goals assists and progressive carries",
+    "top_k": 10,
+    "result_columns": ["Player", "Squad", "Pos", "Nation", "Age", "Gls", "Ast", "xG", "xAG", "PrgC", "PrgP"],
+    "output_file": "bm25_concat_search_results.csv"
+  }
+}
