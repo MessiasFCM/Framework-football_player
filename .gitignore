@@ -13,3 +13,4 @@ Thumbs.db
 !outputs/results/.gitkeep
 !outputs/tables/.gitkeep
 !outputs/figures/.gitkeep
+llm/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf
