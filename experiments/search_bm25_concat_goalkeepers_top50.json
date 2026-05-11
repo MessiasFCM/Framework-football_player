@@ -1,0 +1,36 @@
+{
+  "experiment_name": "BM25_Concat_Goalkeeper_Top50_Search",
+  "task_type": "search",
+  "output_dir": "outputs/results",
+  "dataset": {
+    "name": "football_players"
+  },
+  "model": [
+    {
+      "name": "bm25",
+      "text_strategy": "concat_labels"
+    }
+  ],
+  "execution": {
+    "skip": [],
+    "force": [],
+    "no_save": [],
+    "n_runs": 1,
+    "window_size": 0.05
+  },
+  "evaluation": {
+    "top_ks": [5, 10, 20, 50],
+    "metrics": ["NDCG", "RECALL", "PRECISION", "MAP", "MRR"],
+    "stats": {
+      "tests": [],
+      "alpha": 0.05,
+      "symbol": "UP"
+    }
+  },
+  "search": {
+    "query_text": "position_goalkeeper regular_starter elite_minutes_played high_minutes_played matches_played starts minutes_played",
+    "top_k": 50,
+    "result_columns": ["Player", "Squad", "Pos", "Nation", "Age", "MP", "Starts", "Min", "90s", "CrdY", "CrdR"],
+    "output_file": "bm25_concat_goalkeepers_top50_results.csv"
+  }
+}

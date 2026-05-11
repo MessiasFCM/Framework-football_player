@@ -1,0 +1,30 @@
+{
+  "5": {
+    "NDCG": 1.0,
+    "RECALL": 1.0,
+    "PRECISION": 0.2,
+    "MAP": 1.0,
+    "MRR": 1.0
+  },
+  "10": {
+    "NDCG": 1.0,
+    "RECALL": 1.0,
+    "PRECISION": 0.1,
+    "MAP": 1.0,
+    "MRR": 1.0
+  },
+  "20": {
+    "NDCG": 1.0,
+    "RECALL": 1.0,
+    "PRECISION": 0.05,
+    "MAP": 1.0,
+    "MRR": 1.0
+  },
+  "50": {
+    "NDCG": 1.0,
+    "RECALL": 1.0,
+    "PRECISION": 0.02,
+    "MAP": 1.0,
+    "MRR": 1.0
+  }
+}
