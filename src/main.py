@@ -306,6 +306,30 @@ def normalize_experiment_config(raw_config: dict) -> dict:
     raise ValueError(f"Unsupported legacy experiment: {experiment_name}")
 
 
+def build_knn_relevance_oracle(profiled_df, dataset_config: dict, n_relevant: int = 10) -> list[list[str]]:
+    from sklearn.neighbors import NearestNeighbors
+    from sklearn.preprocessing import StandardScaler
+
+    numeric_columns = [c for c in dataset_config.get("numeric_columns", []) if c in profiled_df.columns]
+    df = profiled_df.reset_index(drop=True)
+    feature_matrix = df[numeric_columns].to_numpy()
+
+    scaler = StandardScaler()
+    scaled = scaler.fit_transform(feature_matrix)
+
+    n_neighbors = min(n_relevant + 1, len(df))
+    knn = NearestNeighbors(n_neighbors=n_neighbors, metric="euclidean")
+    knn.fit(scaled)
+
+    _, indices = knn.kneighbors(scaled)
+
+    doc_ids = df["document_id"].astype(str).tolist()
+    return [
+        [doc_ids[j] for j in neighbor_indices if j != i][:n_relevant]
+        for i, neighbor_indices in enumerate(indices)
+    ]
+
+
 def run_search_evaluation(
     experiment_config: dict,
     evaluation_config: dict,
@@ -318,28 +342,33 @@ def run_search_evaluation(
     if not metrics or not top_ks:
         return None
 
+    n_relevant = int(evaluation_config.get("n_relevant", 10))
+    knn_relevance = build_knn_relevance_oracle(profiled_df, dataset_config, n_relevant=n_relevant)
+    logger.info("KNN relevance oracle built with n_relevant=%d", n_relevant)
+
     id_column = dataset_config["id_column"]
     doc_id_column = "document_id"
     rankings: list[list[str]] = []
     relevance_sets: list[list[str]] = []
     per_query_rows: list[dict[str, object]] = []
 
-    for _, row in profiled_df.iterrows():
+    for i, (_, row) in enumerate(profiled_df.iterrows()):
         ranking_df = fitted_model.rank(str(row["player_profile"]))
         ranked_ids = ranking_df[doc_id_column].astype(str).tolist()
         rankings.append(ranked_ids)
-        relevance_sets.append([str(row[doc_id_column])])
+        relevance_sets.append(knn_relevance[i])
 
-        rank_position = next(
-            (rank for rank, candidate in enumerate(ranked_ids, start=1) if candidate == str(row[doc_id_column])),
+        relevant_ids = set(knn_relevance[i])
+        first_relevant_rank = next(
+            (rank for rank, candidate in enumerate(ranked_ids, start=1) if candidate in relevant_ids),
             None,
         )
         per_query_rows.append(
             {
                 "document_id": row[doc_id_column],
                 "query_player": row[id_column],
-                "relevant_player": row[id_column],
-                "rank": rank_position,
+                "n_relevant": len(knn_relevance[i]),
+                "first_relevant_rank": first_relevant_rank,
                 "top_1_document_id": ranked_ids[0] if ranked_ids else None,
                 "top_1_player": ranking_df.iloc[0][id_column] if not ranking_df.empty else None,
                 "top_5_document_ids": " | ".join(ranked_ids[: min(5, len(ranked_ids))]),

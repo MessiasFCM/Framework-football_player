@@ -19,6 +19,7 @@
     "window_size": 0.05
   },
   "evaluation": {
+    "n_relevant": 10,
     "top_ks": [5, 10, 20, 50],
     "metrics": ["NDCG", "RECALL", "PRECISION", "MAP", "MRR"],
     "stats": {
