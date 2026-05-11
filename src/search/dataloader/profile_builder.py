@@ -58,13 +58,54 @@ class TextConcatBuilder:
 
     def build(self, dataframe: pd.DataFrame) -> list[str]:
         available_columns = [column for column in self.feature_columns if column in dataframe.columns]
+        quantile_map = self._build_quantile_map(dataframe, available_columns)
         profiles: list[str] = []
 
         for _, row in dataframe.iterrows():
-            segments = [self._build_segment(column, row[column]) for column in available_columns]
-            profiles.append(" | ".join(segments))
+            profiles.append(self._build_profile(row, available_columns, quantile_map))
 
         return profiles
+
+    def _build_profile(
+        self,
+        row: pd.Series,
+        available_columns: list[str],
+        quantile_map: dict[str, tuple[float, float, float]],
+    ) -> str:
+        identity_columns = ["Player", "Nation", "Pos", "Squad", "Age", "Born"]
+        attacking_columns = ["Gls", "Ast", "xG", "xAG", "npxG", "xG+xAG"]
+        progression_columns = ["PrgC", "PrgP", "PrgR"]
+        usage_columns = ["MP", "Starts", "Min", "90s"]
+        discipline_columns = ["CrdY", "CrdR"]
+
+        sections: list[str] = []
+        sections.append(
+            "identity: " + " | ".join(
+                self._build_segment(column, row[column])
+                for column in identity_columns
+                if column in available_columns
+            )
+        )
+
+        for section_name, columns in [
+            ("attacking_stats", attacking_columns),
+            ("progression_stats", progression_columns),
+            ("usage_stats", usage_columns),
+            ("discipline_stats", discipline_columns),
+        ]:
+            section_parts = [
+                self._build_segment(column, row[column])
+                for column in columns
+                if column in available_columns
+            ]
+            if section_parts:
+                sections.append(f"{section_name}: " + " | ".join(section_parts))
+
+        derived_tags = self._build_derived_tags(row, quantile_map)
+        if derived_tags:
+            sections.append("tags: " + " | ".join(derived_tags))
+
+        return " || ".join(section for section in sections if section.strip())
 
     def _build_segment(self, column: str, value: object) -> str:
         label = LABEL_ALIASES.get(column, self._normalize_label(column))
@@ -86,6 +127,87 @@ class TextConcatBuilder:
     @staticmethod
     def _normalize_label(column: str) -> str:
         return str(column).strip().casefold().replace(" ", "_")
+
+    def _build_quantile_map(
+        self,
+        dataframe: pd.DataFrame,
+        available_columns: list[str],
+    ) -> dict[str, tuple[float, float, float]]:
+        quantile_columns = ["Gls", "Ast", "xG", "xAG", "PrgC", "PrgP", "PrgR", "Min", "Starts", "90s"]
+        quantile_map: dict[str, tuple[float, float, float]] = {}
+        for column in quantile_columns:
+            if column not in available_columns:
+                continue
+            numeric_series = pd.to_numeric(dataframe[column], errors="coerce").dropna()
+            if numeric_series.empty:
+                continue
+            quantile_map[column] = (
+                float(numeric_series.quantile(0.50)),
+                float(numeric_series.quantile(0.75)),
+                float(numeric_series.quantile(0.90)),
+            )
+        return quantile_map
+
+    def _build_derived_tags(
+        self,
+        row: pd.Series,
+        quantile_map: dict[str, tuple[float, float, float]],
+    ) -> list[str]:
+        tags: list[str] = []
+
+        nation = str(row.get("Nation", "")).strip()
+        if nation:
+            tags.append(f"nation_{nation.casefold()}")
+
+        position_value = str(row.get("Pos", "")).strip()
+        if position_value:
+            for code in [token.strip() for token in re.split(r"[/,]", position_value) if token.strip()]:
+                tags.append(f"position_{POSITION_ALIASES.get(code, code.casefold())}")
+
+        for column, label in [
+            ("Gls", "goals"),
+            ("Ast", "assists"),
+            ("xG", "expected_goals"),
+            ("xAG", "expected_assists"),
+            ("PrgC", "progressive_carries"),
+            ("PrgP", "progressive_passes"),
+            ("PrgR", "progressive_receptions"),
+            ("Min", "minutes_played"),
+        ]:
+            bucket_tag = self._bucketize_value(column, row.get(column), quantile_map)
+            if bucket_tag is not None:
+                tags.append(f"{bucket_tag}_{label}")
+
+        starts = pd.to_numeric(pd.Series([row.get("Starts")]), errors="coerce").iloc[0]
+        matches = pd.to_numeric(pd.Series([row.get("MP")]), errors="coerce").iloc[0]
+        if pd.notna(starts) and pd.notna(matches):
+            if matches > 0 and starts / matches >= 0.75:
+                tags.append("regular_starter")
+            elif starts > 0:
+                tags.append("rotation_player")
+
+        return tags
+
+    @staticmethod
+    def _bucketize_value(
+        column: str,
+        value: object,
+        quantile_map: dict[str, tuple[float, float, float]],
+    ) -> str | None:
+        if column not in quantile_map:
+            return None
+        numeric_value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+        if pd.isna(numeric_value):
+            return None
+
+        q50, q75, q90 = quantile_map[column]
+        if numeric_value >= q90:
+            return "elite"
+        if numeric_value >= q75:
+            return "high"
+        if numeric_value >= q50:
+            return "medium"
+        return "low"
 
 
 @dataclass

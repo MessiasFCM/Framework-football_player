@@ -99,6 +99,7 @@ def run_search_experiment(experiment_config: dict) -> Path:
         b=model_params.get("hyperparams", {}).get("b", model_params.get("b", 0.75)),
     )
     fitted_model = model.fit(documents=profiled_df["player_profile"], metadata=profiled_df)
+    save_profile_jsonl(profiled_df, sanitize_name(experiment_config["experiment_name"]))
 
     evaluation_path = run_search_evaluation(
         experiment_config=experiment_config,
@@ -153,6 +154,7 @@ def build_profiled_dataset(processed_df, dataset_config: dict, text_strategy: st
         feature_columns=dataset_config["text_columns"] + dataset_config["numeric_columns"],
     )
     profiled_df = processed_df.copy()
+    profiled_df["document_id"] = build_document_ids(profiled_df)
     profiled_df["player_profile"] = profile_builder.build(processed_df)
     return profiled_df
 
@@ -317,27 +319,31 @@ def run_search_evaluation(
         return None
 
     id_column = dataset_config["id_column"]
+    doc_id_column = "document_id"
     rankings: list[list[str]] = []
     relevance_sets: list[list[str]] = []
     per_query_rows: list[dict[str, object]] = []
 
     for _, row in profiled_df.iterrows():
         ranking_df = fitted_model.rank(str(row["player_profile"]))
-        ranked_ids = ranking_df[id_column].astype(str).tolist()
+        ranked_ids = ranking_df[doc_id_column].astype(str).tolist()
         rankings.append(ranked_ids)
-        relevance_sets.append([str(row[id_column])])
+        relevance_sets.append([str(row[doc_id_column])])
 
         rank_position = next(
-            (rank for rank, candidate in enumerate(ranked_ids, start=1) if candidate == str(row[id_column])),
+            (rank for rank, candidate in enumerate(ranked_ids, start=1) if candidate == str(row[doc_id_column])),
             None,
         )
         per_query_rows.append(
             {
+                "document_id": row[doc_id_column],
                 "query_player": row[id_column],
                 "relevant_player": row[id_column],
                 "rank": rank_position,
-                "top_1_player": ranked_ids[0] if ranked_ids else None,
-                "top_5_players": " | ".join(ranked_ids[: min(5, len(ranked_ids))]),
+                "top_1_document_id": ranked_ids[0] if ranked_ids else None,
+                "top_1_player": ranking_df.iloc[0][id_column] if not ranking_df.empty else None,
+                "top_5_document_ids": " | ".join(ranked_ids[: min(5, len(ranked_ids))]),
+                "top_5_players": " | ".join(ranking_df[id_column].astype(str).tolist()[: min(5, len(ranking_df))]),
                 "query_text": row["player_profile"],
             }
         )
@@ -370,6 +376,36 @@ def save_per_query_search_report(rows: list[dict[str, object]], experiment_name:
     report_path = resolve_path("outputs/results") / f"{experiment_name}_search_queries.csv"
     save_report(report_df, report_path)
     return report_df
+
+
+def save_profile_jsonl(profiled_df, experiment_name: str) -> None:
+    output_path = resolve_path("outputs/results") / f"{experiment_name}_players_text.jsonl"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as file:
+        for _, row in profiled_df.iterrows():
+            record = {
+                "document_id": str(row["document_id"]),
+                "player": row.get("Player"),
+                "squad": row.get("Squad"),
+                "pos": row.get("Pos"),
+                "nation": row.get("Nation"),
+                "text": row.get("player_profile"),
+            }
+            import json
+
+            file.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def build_document_ids(profiled_df) -> list[str]:
+    if "Rk" in profiled_df.columns:
+        return [f"rk_{int(value)}" for value in profiled_df["Rk"].tolist()]
+
+    document_ids: list[str] = []
+    for index, row in profiled_df.reset_index(drop=True).iterrows():
+        player = sanitize_name(str(row.get("Player", "player")))
+        squad = sanitize_name(str(row.get("Squad", "club")))
+        document_ids.append(f"{player}_{squad}_{index}")
+    return document_ids
 
 
 def main() -> None:
