@@ -14,6 +14,8 @@ from src.search.evaluation.evaluator import SearchEvaluator
 from src.search.evaluation.reports import metrics_report_to_dataframe
 from src.search.evaluation.reports import save_metrics_report
 from src.search.evaluation.reports import save_report
+from src.search.model.base_model import BaseSearchModel
+from src.search.model.bi_encoder_model import BiEncoderSearchModel
 from src.search.model.bm25_model import BM25SearchModel
 from src.utils.config import load_config
 from src.utils.logging import get_logger
@@ -21,6 +23,9 @@ from src.utils.paths import ensure_project_dirs, resolve_path
 
 
 logger = get_logger(__name__)
+
+BM25_MODEL_NAMES = {"bm25", "bm25model"}
+BI_ENCODER_MODEL_NAMES = {"biencoder", "bi_encoder", "biencodersearchmodel", "bi_encoder_search_model"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -91,13 +96,7 @@ def run_search_experiment(experiment_config: dict) -> Path:
     )
 
     model_name = str(model_config["name"]).casefold()
-    if model_name not in {"bm25", "bm25model"}:
-        raise ValueError(f"Unsupported text search model: {model_name}")
-
-    model = BM25SearchModel(
-        k1=model_params.get("hyperparams", {}).get("k1", model_params.get("k1", 1.5)),
-        b=model_params.get("hyperparams", {}).get("b", model_params.get("b", 0.75)),
-    )
+    model = build_search_model(model_name=model_name, model_params=model_params)
     fitted_model = model.fit(documents=profiled_df["player_profile"], metadata=profiled_df)
     save_profile_jsonl(profiled_df, sanitize_name(experiment_config["experiment_name"]))
 
@@ -239,6 +238,27 @@ def extract_model_parameters(model_config: dict) -> dict:
     return model_config
 
 
+def build_search_model(model_name: str, model_params: dict) -> BaseSearchModel:
+    if model_name in BM25_MODEL_NAMES:
+        return BM25SearchModel(
+            k1=model_params.get("hyperparams", {}).get("k1", model_params.get("k1", 1.5)),
+            b=model_params.get("hyperparams", {}).get("b", model_params.get("b", 0.75)),
+        )
+
+    if model_name in BI_ENCODER_MODEL_NAMES:
+        return BiEncoderSearchModel(
+            pretrained_name=model_params.get("pretrained_name", "all-MiniLM-L6-v2"),
+            token_max_length=int(model_params.get("token_max_length", 128)),
+            batch_size=int(model_params.get("batch_size", 64)),
+            normalize_embeddings=bool(model_params.get("normalize_embeddings", True)),
+            use_annoy=bool(model_params.get("use_annoy", True)),
+            annoy_n_trees=int(model_params.get("annoy_n_trees", 10)),
+            annoy_metric=str(model_params.get("annoy_metric", "angular")),
+        )
+
+    raise ValueError(f"Unsupported text search model: {model_name}")
+
+
 def build_output_path(experiment_config: dict, task_type: str, model_name: str, explicit_filename: str | None) -> Path:
     output_dir = Path(experiment_config.get("output_dir", "outputs/results"))
     if not output_dir.is_absolute():
@@ -311,7 +331,7 @@ def run_search_evaluation(
     evaluation_config: dict,
     dataset_config: dict,
     profiled_df,
-    fitted_model: BM25SearchModel,
+    fitted_model: BaseSearchModel,
 ) -> Path | None:
     metrics = evaluation_config.get("metrics", [])
     top_ks = [int(value) for value in evaluation_config.get("top_ks", [])]

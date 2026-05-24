@@ -1,0 +1,36 @@
+{
+  "experiment_name": "BiEncoder_Concat_Player_Search",
+  "task_type": "search",
+  "output_dir": "outputs/results",
+  "dataset": {
+    "name": "football_players"
+  },
+  "model": [
+    {
+      "name": "biencoder",
+      "text_strategy": "concat_labels"
+    }
+  ],
+  "execution": {
+    "skip": [],
+    "force": [],
+    "no_save": [],
+    "n_runs": 1,
+    "window_size": 0.05
+  },
+  "evaluation": {
+    "top_ks": [5, 10, 20, 50],
+    "metrics": ["NDCG", "RECALL", "PRECISION", "MAP", "MRR"],
+    "stats": {
+      "tests": [],
+      "alpha": 0.05,
+      "symbol": "UP"
+    }
+  },
+  "search": {
+    "query_text": "Brazilian forward with high goals expected goals assists and progressive carries",
+    "top_k": 10,
+    "result_columns": ["Player", "Squad", "Pos", "Nation", "Age", "Gls", "Ast", "xG", "xAG", "PrgC", "PrgP"],
+    "output_file": "biencoder_concat_search_results.csv"
+  }
+}
