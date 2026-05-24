@@ -63,6 +63,12 @@ Busca textual com `BM25` e perfil `concat_labels`:
 python -m src.main --experiment experiments/search_bm25_concat.json
 ```
 
+Busca textual com `BiEncoder` e perfil `concat_labels`:
+
+```bash
+python -m src.main --experiment experiments/search_biencoder_concat.json
+```
+
 Busca textual com `BM25` e descricao textual simples e controlada:
 
 ```bash
@@ -106,6 +112,7 @@ Se preferir nao configurar Kaggle agora, coloque o arquivo Excel manualmente em:
 ## O que esta funcional hoje
 
 - `search/model/bm25_model.py`: baseline de busca textual
+- `search/model/bi_encoder_model.py`: baseline de busca densa com embeddings
 - `search/dataloader/profile_builder.py`: `concat_labels` e descricao textual controlada
 - `recs/model/knn_model.py`: baseline de recomendacao com `StandardScaler` + `NearestNeighbors`
 - `dataset/manager.py`: carga, download, limpeza e padronizacao do Excel

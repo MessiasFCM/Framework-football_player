@@ -11,4 +11,8 @@ dependencies:
   - tqdm
   - pytest
   - kaggle
+  - pytorch
   - pip
+  - pip:
+      - sentence-transformers>=3.0.0
+      - annoy>=1.17.3

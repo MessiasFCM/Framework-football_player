@@ -6,3 +6,6 @@ openpyxl>=3.1.0
 tqdm>=4.66.0
 pytest>=8.0.0
 kaggle>=1.6.17
+torch>=2.2.0
+sentence-transformers>=3.0.0
+annoy>=1.17.3
