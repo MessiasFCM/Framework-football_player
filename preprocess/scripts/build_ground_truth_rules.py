@@ -1,37 +1,16 @@
-"""
-Atribui tag de estilo de jogo (single-label) a cada jogador usando REGRAS
-DETERMINÍSTICAS — sem LLM. Score por role = soma ponderada de z-scores
-calculados DENTRO da posição primária.
-
-Para cada jogador:
-  1. Determina a posição primária (primeiro código da coluna Pos).
-  2. Calcula z-scores das stats relevantes apenas entre jogadores daquela posição.
-  3. Cada role tem um conjunto de pesos por coluna; score = Σ peso × z.
-  4. A tag é o argmax dos scores das 3 roles daquela posição.
-  5. Jogadores com 90s < MIN_90S recebem 'insuficiente'.
-
-Saída:
-  llm/output/tags_rules.csv
-  Mesmo schema do tags_llm.csv (rk, player, squad, nation, pos, primary_pos,
-  age, ninetys, tag) pra permitir comparação direta com a versão por LLM.
-"""
 from __future__ import annotations
 
 from pathlib import Path
 
 import pandas as pd
 
-ROOT = Path("/home/andrelima/Projetos/Framework-football_player/llm")
-INPUT_XLSX = ROOT / "data" / "All_Leagues_Data.xlsx"
+PROJECT_ROOT = Path("/home/andrelima/Projetos/Framework-football_player")
+ROOT = PROJECT_ROOT / "preprocess"
+INPUT_XLSX = PROJECT_ROOT / "data" / "raw" / "All_Leagues_Data.xlsx"
 OUTPUT_CSV = ROOT / "output" / "tags_rules.csv"
 
 SHEET = "AllCompDataset"
-MIN_90S = 0   # mínimo de "jogos completos" pra entrar no gold
-
-# ---------------------------------------------------------------------------
-# Definição das tags — peso por coluna; score = soma ponderada de z-scores
-# Pesos positivos = a métrica precisa ser ALTA. Pesos negativos = BAIXA.
-# ---------------------------------------------------------------------------
+MIN_90S = 0  
 ROLES: dict[str, dict[str, dict[str, float]]] = {
     "DF": {
         "zagueiro_classico":  {"Min": 1.0, "PrgC": -1.0, "PrgP": -0.5, "Ast": -0.5},
@@ -109,7 +88,6 @@ def main() -> None:
 
     OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
 
-    # Mesmo schema do tags_llm.csv pra facilitar comparação direta
     output = pd.DataFrame({
         "rk": tagged["Rk"].astype(int),
         "player": tagged["Player"],

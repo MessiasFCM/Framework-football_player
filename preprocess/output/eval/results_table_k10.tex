@@ -1,0 +1,19 @@
+\begin{table}[h]
+\centering
+\caption{Resultados da busca por tag de estilo de jogo, K=10. Negrito indica o melhor valor por métrica.}
+\label{tab:tag-search-k10}
+\begin{tabular}{lllrrrrr}
+\toprule
+Texto & Modelo & Tags & Recall@10 & nDCG@10 & MAP@10 & MRR@10 & P@10 \\
+\midrule
+Concat & BiEncoder & LLM & 0.0195 & 0.1658 & 0.0873 & 0.2222 & 0.1778 \\
+Concat & BiEncoder & regras & 0.0152 & 0.0953 & 0.0285 & 0.2221 & 0.1083 \\
+Concat & BM25 & LLM & 0.0133 & 0.1111 & 0.0503 & 0.2159 & 0.1111 \\
+Concat & BM25 & regras & 0.0080 & 0.0833 & 0.0284 & 0.2042 & 0.0833 \\
+LLM & BiEncoder & LLM & 0.0315 & \textbf{0.3126} & \textbf{0.2529} & 0.3741 & \textbf{0.3222} \\
+LLM & BiEncoder & regras & 0.0273 & 0.1789 & 0.0901 & 0.2917 & 0.1750 \\
+LLM & BM25 & LLM & \textbf{0.0510} & 0.3126 & 0.2246 & \textbf{0.4944} & 0.2889 \\
+LLM & BM25 & regras & 0.0330 & 0.1712 & 0.0838 & 0.3550 & 0.1667 \\
+\bottomrule
+\end{tabular}
+\end{table}

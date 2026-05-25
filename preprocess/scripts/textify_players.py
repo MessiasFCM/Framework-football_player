@@ -9,8 +9,9 @@ import pandas as pd
 from llama_cpp import Llama
 from tqdm import tqdm
 
-ROOT = Path("/home/andrelima/Projetos/Brasileirao")
-INPUT_XLSX = ROOT / "data" / "All_Leagues_Data.xlsx"
+PROJECT_ROOT = Path("/home/andrelima/Projetos/Framework-football_player")
+ROOT = PROJECT_ROOT / "preprocess"
+INPUT_XLSX = PROJECT_ROOT / "data" / "raw" / "All_Leagues_Data.xlsx"
 OUTPUT_JSONL = ROOT / "output" / "players_text.jsonl"
 
 MODEL_PATH = ROOT / "models" / "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
