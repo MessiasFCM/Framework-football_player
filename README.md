@@ -1,131 +1,92 @@
-# Football Player Search and Recommendation Framework
+# A Framework for Football Player Search
 
-Framework modular em Python para busca e recomendacao de jogadores com base em um arquivo Excel da temporada 2024-2025.
+Framework em Python para busca textual e recomendação de jogadores com base em dados da temporada 2024-2025.
+
+## Participantes
+
+- André Chagas Lima [Universidade Federal de São João del-Rei | andrechalima@aluno.ufsj.edu.br]
+- Lucas Eduardo Bernardes de Paula [Universidade Federal de São João del-Rei | xxlucas0404xx@aluno.ufsj.edu.br]
+- Messias Feres Curi Melo [Universidade Federal de São João del-Rei | messiasferes127@aluno.ufsj.edu.br]
 
 ## Estrutura
 
 ```text
-football-player-framework/
-|- data/
-|  |- raw/
-|  |- processed/
-|  `- queries/
-|- configs/
-|  |- datasets/
-|  `- models/
-|- experiments/
-|- src/
-|  |- dataset/
-|  |- recs/
-|  |  |- dataloader/
-|  |  |- evaluation/
-|  |  `- model/
-|  `- search/
-|     |- dataloader/
-|     |- evaluation/
-|     `- model/
-|- outputs/
-`- tests/
+Code-AM/
+|-- configs/
+|-- data/
+|   |-- raw/
+|   `-- processed/
+|-- experiments/
+|-- outputs/
+|-- preprocess/
+|   |-- output/
+|   `-- scripts/
+`-- src/
+    |-- dataset/
+    |-- recs/
+    |   |-- dataloader/
+    |   |-- evaluation/
+    |   `-- model/
+    |-- search/
+    |   |-- dataloader/
+    |   |-- evaluation/
+    |   `-- model/
+    `-- utils/
 ```
 
 ## Requisitos
 
 - Python 3.10+
-- pandas
-- numpy
-- scikit-learn
-- pyyaml
-- openpyxl
-- tqdm
-- pytest
-- kaggle
+- `pip` ou `conda`
+- Dependências em `requirements.txt`
+- Para scripts com LLM local: dependências em `preprocess/requirements.txt`
 
-## Instalacao
+## Instalação
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+.venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Ou:
+Se for usar os scripts de `preprocess` com LLM local:
 
 ```bash
-conda env create -f environment.yml
-conda activate football-player-framework
+pip install -r preprocess/requirements.txt
 ```
 
-## Execucao
+## Dataset
 
-Busca textual com `BM25` e perfil `concat_labels`:
+O arquivo Excel principal deve estar em um destes caminhos:
+
+- `data/raw/Top_10_Leagues_Player_Data_2024_2025.xlsx`
+- `data/raw/football_players/Top_10_Leagues_Player_Data_2024_2025.xlsx`
+
+Configuração base: [configs/datasets/football_players.yaml](C:/Users/MessiasFCM/OneDrive/Documentos/GitHub/Code-AM/configs/datasets/football_players.yaml)
+
+Se o arquivo não existir localmente, o projeto tenta baixar do Kaggle:
+
+- `abhayr10/top-10-leagues-player-data2024-25`
+
+Autenticação do Kaggle:
+
+1. Colocar `kaggle.json` em `~/.config/kaggle/kaggle.json`
+2. Ou definir `KAGGLE_USERNAME` e `KAGGLE_KEY`
+
+## Como rodar
+
+Exemplo da pipeline principal:
 
 ```bash
 python -m src.main --experiment experiments/search_bm25_concat.json
 ```
 
-Busca textual com `BiEncoder` e perfil `concat_labels`:
+Esse fluxo carrega o Excel, processa os dados e gera saídas em `data/processed/` e `outputs/results/`.
+
+Exemplo de `preprocess/scripts`:
 
 ```bash
-python -m src.main --experiment experiments/search_biencoder_concat.json
+python preprocess/scripts/build_ground_truth_rules.py
 ```
 
-Busca textual com `BM25` e descricao textual simples e controlada:
-
-```bash
-python -m src.main --experiment experiments/search_bm25_description.json
-```
-
-Recomendacao com `KNN`:
-
-```bash
-python -m src.main --experiment experiments/recs_knn.json
-```
-
-Os experimentos agora aceitam `JSON` ou `YAML`. O formato preferido e o JSON unificado, com campos como:
-
-- `experiment_name`
-- `task_type`
-- `dataset`
-- `model`
-- `execution`
-- `evaluation`
-- `search` ou `recs`
-
-## Dataset
-
-O dataset principal fica em `data/raw/` e a configuracao base esta em [configs/datasets/football_players.yaml](/home/messias/projects/Framework-football_player/configs/datasets/football_players.yaml).
-
-Se o arquivo nao existir localmente, o loader tenta baixar do Kaggle:
-
-- `abhayr10/top-10-leagues-player-data2024-25`
-
-Configure a autenticacao do Kaggle por um destes caminhos:
-
-1. salvar `kaggle.json` em `~/.config/kaggle/kaggle.json`
-2. definir `KAGGLE_USERNAME` e `KAGGLE_KEY`
-
-Se preferir nao configurar Kaggle agora, coloque o arquivo Excel manualmente em:
-
-- `data/raw/Top_10_Leagues_Player_Data_2024_2025.xlsx`
-- ou `data/raw/football_players/Top_10_Leagues_Player_Data_2024_2025.xlsx`
-
-## O que esta funcional hoje
-
-- `search/model/bm25_model.py`: baseline de busca textual
-- `search/model/bi_encoder_model.py`: baseline de busca densa com embeddings
-- `search/dataloader/profile_builder.py`: `concat_labels` e descricao textual controlada
-- `recs/model/knn_model.py`: baseline de recomendacao com `StandardScaler` + `NearestNeighbors`
-- `dataset/manager.py`: carga, download, limpeza e padronizacao do Excel
-
-## Saidas Da Busca
-
-- ranking da consulta manual em `outputs/results/`
-- metricas agregadas em `outputs/results/*_search_metrics.json`
-- tabela de metricas em `outputs/tables/*_search_metrics.csv`
-- relatorio por query em `outputs/results/*_search_queries.csv`
-
-## Testes
-
-```bash
-pytest -q
-```
+Esse script gera as tags heurísticas em `preprocess/output/tags_rules.csv`.
