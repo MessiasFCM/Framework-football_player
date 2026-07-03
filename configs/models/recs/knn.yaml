@@ -1,5 +1,0 @@
-model:
-  name: "knn"
-  n_neighbors: 6
-  metric: "euclidean"
-  algorithm: "auto"

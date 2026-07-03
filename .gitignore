@@ -1,26 +1,72 @@
+# ============================
+# Python (backend)
+# ============================
 __pycache__/
 *.py[cod]
+*.pyo
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .venv/
+venv/
+env/
 .coverage
 .python-version
-.DS_Store
-Thumbs.db
+*.egg-info/
+dist/
+build/
 *.xlsx
 *.log
-outputs/results/*
-outputs/tables/*
-outputs/figures/*
-outputs/indexes/*
-!outputs/results/.gitkeep
-!outputs/tables/.gitkeep
-!outputs/figures/.gitkeep
-!outputs/indexes/.gitkeep
+
+# Saidas geradas pelo framework de ML (backend/outputs, backend/data)
+backend/outputs/results/*
+backend/outputs/tables/*
+backend/outputs/figures/*
+backend/outputs/indexes/*
+!backend/outputs/results/.gitkeep
+!backend/outputs/tables/.gitkeep
+!backend/outputs/figures/.gitkeep
+!backend/outputs/indexes/.gitkeep
+!backend/data/raw/.gitkeep
+!backend/data/processed/.gitkeep
+backend/preprocess/models/*.gguf
+
 models/
 checkpoints/
 wandb/
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-preprocess/models/*.gguf
+
+# ============================
+# Node / Next.js (frontend)
+# ============================
+node_modules/
+.pnp
+.pnp.js
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+*.tsbuildinfo
+
+# Variaveis de ambiente
+# frontend/.env e intencionalmente versionado (contem apenas chaves publicas/anon do Supabase).
+# Overrides locais e qualquer coisa com segredos ficam fora do git.
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.secret
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ============================
+# Geral
+# ============================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
